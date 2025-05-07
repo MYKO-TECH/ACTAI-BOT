@@ -175,6 +175,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(response)
         return
 
+    # Location Inquiry Handler
+if any(keyword in user_message for keyword in ["location", "address", "where is act", "directions"]):
+    loc = KNOWLEDGE['location']
+    response = format_message(
+        "ACT LOCATION 📍",
+        f"🏛️ Main Campus: {loc['main']}\n"
+        f"🗺️ Directions: {loc['directions']}\n\n"
+        f"📞 Need help finding us? Call: {KNOWLEDGE['contacts']['office_phone']}"
+    )
+    await update.message.reply_text(response)
+    return
+
+# Enhanced Contact Information Handler
+if any(keyword in user_message for keyword in ["contact", "phone", "call", "number", "reach"]):
+    contacts = KNOWLEDGE['contacts']
+    response = format_message(
+        "CONTACT ACT 📞",
+        f"📱 General Inquiries: {contacts['phone']}\n"
+        f"📞 Office Direct Line: {contacts['office_phone']}\n"
+        f"📧 Email: {contacts['email']}\n"
+        f"🌐 Website: {contacts['website']}"
+    )
+    await update.message.reply_text(response)
+    return
+
     if "course" in user_message and ("fee" in user_message or "price" in user_message or "cost" in user_message):
         courses_data = KNOWLEDGE['courses']
         course_fee_details = []
