@@ -305,14 +305,23 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return target
 
 async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Existing admin checks...
+    if not ADMIN_ID:
+        await update.message.reply_text("❌ Admin system disabled")
+        return
+    if str(update.effective_user.id) != ADMIN_ID.strip():
+        await update.message.reply_text("❌ Administrator authorization required")
+        return
+    
+    # Rest of the update_knowledge function...
     
     try:
         new_data_json = command_parts[1]
         new_data = json.loads(new_data_json)
         
         global KNOWLEDGE
-        KNOWLEDGE = deep_merge(KNOWLEDGE, new_data)  # Replaced shallow update
+        KNOWLEDGE = deep_merge(KNOWLEDGE, new_data)  # Fixed deep merge
+        
+        # Rest of the try block...  # Replaced shallow update
         
         await update.message.reply_text(
             format_message(
