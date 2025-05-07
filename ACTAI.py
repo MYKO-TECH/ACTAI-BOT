@@ -1,3 +1,9 @@
+import logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 import os
 import json
 import re
@@ -118,7 +124,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text.lower()
-    print(f"Message from {update.effective_user.first_name} ({update.effective_user.id}): {user_message}")
+    logger.info(f"Message from {update.effective_user.first_name} ({update.effective_user.id}): {user_message}")
 
     # Handle general ID input if awaited
     if context.user_data.get('awaiting_any_id'):
@@ -231,7 +237,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # OpenAI fallback
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI(api_key=OPENAI_API_KEY, timeout=30)
     
     knowledge_str = "\n".join(
     f"{k}: {', '.join(v.keys()) if isinstance(v, dict) else str(v)[:100]}..."
@@ -267,7 +273,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     except Exception as e:
-        print(f"OpenAI API Error: {str(e)}")
+        logger.error(f"OpenAI API Error: {str(e)}")
         await update.message.reply_text(
             format_message(
                 "SYSTEM ERROR ⚠️",
@@ -311,7 +317,7 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Updated sections: {', '.join(new_data.keys())}"
             )
         )
-        print(f"Knowledge base updated by admin {update.effective_user.id}. New keys: {', '.join(new_data.keys())}")
+        logger.info(f"Knowledge base updated by admin {update.effective_user.id}. New keys: {', '.join(new_data.keys())}")
 
     except json.JSONDecodeError as e:
         await update.message.reply_text(
@@ -334,14 +340,18 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Webhook handlers and main function remain largely the same
 async def webhook_handler(request):
-    # Verify secret token first
-    if request.headers.get('X-Telegram-Bot-Api-Secret-Token') != WEBHOOK_SECRET:
-        return web.Response(status=403)
-    
-    data = await request.json()
-    update = Update.de_json(data, application.bot)
-    await application.process_update(update)
-    return web.Response()
+    try:
+        # Verify secret token first
+        if request.headers.get('X-Telegram-Bot-Api-Secret-Token') != WEBHOOK_SECRET:
+            return web.Response(status=403)
+        
+        data = await request.json()
+        update = Update.de_json(data, application.bot)
+        await application.process_update(update)
+        return web.Response()
+    except Exception as e:  # Now properly aligned
+        logger.error(f"Webhook processing failed: {str(e)}")
+        return web.Response(status=500)
 
 async def health_check(request):
     return web.Response(text="OK")
@@ -354,10 +364,9 @@ async def main():
         .updater(None)  # For webhook setup
         .build()
     )
-
     # Initialize application
     await application.initialize()
-
+    await application.start()
     # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
@@ -374,7 +383,7 @@ async def main():
     await runner.setup()
     site = web.TCPSite(runner, host='0.0.0.0', port=port)
     await site.start()
-    print(f"🚀 Web server started on port {port}")
+    logger.info(f"🚀 Web server started on port {port}")
 
     # Set webhook with security parameters
     render_app_url = os.getenv("RENDER_EXTERNAL_URL", "https://ACTAIBOT.onrender.com")
@@ -387,30 +396,30 @@ async def main():
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True
         )
-        print(f"✅ Webhook successfully set to: {webhook_url}")
-        print(f"🛡️ Using secret token: {WEBHOOK_SECRET[:3]}...{WEBHOOK_SECRET[-3:]}")  # Partial reveal for verification
+       logger.info(f"✅ Webhook successfully set to: {webhook_url}")
+       logger.info(f"🛡️ Using secret token: {WEBHOOK_SECRET[:3]}...{WEBHOOK_SECRET[-3:]}")  # Partial reveal for verification
     except Exception as e:
-        print(f"❌ Failed to set webhook: {str(e)}")
+        logger.error(f"❌ Failed to set webhook: {str(e)}")
         raise
 
-    print("🎓 ACT-AI Assistant is ACTIVE and listening for updates...")
+    logger.info("🎓 ACT-AI Assistant is ACTIVE and listening for updates...")
     
     # Keep the application alive
     try:
         await asyncio.Event().wait()
     finally:
-        print("Shutting down web server and application...")
+        logger.info("Shutting down web server and application...")
         await runner.cleanup()
         if application.running:
              await application.stop()
         await application.shutdown()
-        print("Shutdown complete.")
+        logger.info("Shutdown complete.")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n🔵 Service shutdown initiated by KeyboardInterrupt.")
+        logger.info("\n🔵 Service shutdown initiated by KeyboardInterrupt.")
     except Exception as e:
-        print(f"💥 An unexpected error occurred in main: {e}")
+        logger.error(f"💥 An unexpected error occurred in main: {e}")
