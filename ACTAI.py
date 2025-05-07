@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import asyncio
 from aiohttp import web
 from openai import OpenAI
@@ -17,7 +18,8 @@ from telegram.ext import (
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ADMIN_ID = os.getenv("ADMIN_ID", "") # Ensure ADMIN_ID is loaded
+ADMIN_ID = os.getenv("ADMIN_ID")  # Remove default value # Ensure ADMIN_ID is loaded
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
 # ================= KNOWLEDGE CONFIGURATION =================
 AI_CONFIG = {
@@ -46,7 +48,7 @@ KNOWLEDGE = {
         "computer_science": {"price": 15000, "currency": "Br/half-year"},
         "business_administration": {"price": 15000, "currency": "Br/half-year"}, # Added currency for consistency
         "cybersecurity_training": {
-            "price": 1500,
+            "price": 15000,
             "currency": "Br", # Added currency for consistency
             "schedule": "Next class starts tomorrow at 2:00 PM",
             "location": "ACT Building 2nd Floor",
@@ -112,9 +114,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Handle general ID input if awaited
     if context.user_data.get('awaiting_any_id'):
-        # Basic ID format validation (example: ACT-XXXX-XX)
-        # Adjust regex or logic if ID format is different
-        if user_message.lower().startswith("act-") and len(user_message.split('-')[1]) == 4 and len(user_message.split('-')[2]) == 2 and user_message.split('-')[1].isdigit() and user_message.split('-')[2].isdigit() and len(user_message) == 10 :
+        if re.fullmatch(r"^ACT-\d{4}-\d{2}$", user_message, re.IGNORECASE):
             context.user_data['student_id'] = user_message.upper()
             context.user_data['id_verified_format'] = True
             await update.message.reply_text(
@@ -130,8 +130,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Please use the correct ACT Student ID format (e.g., ACT-1234-56).\n📞 Contact admin for help: {KNOWLEDGE['contacts']['phone']}"
                 )
             )
-        context.user_data['awaiting_any_id'] = False # Consume the state
-        return
+        context.user_data['awaiting_any_id'] = False  # Consume the state
+        return  # Exit after handling ID validation
+
+    # Rest of your handle_message code below...
 
 
     # Pre-defined responses using KNOWLEDGE data
@@ -223,7 +225,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # OpenAI fallback
     client = OpenAI(api_key=OPENAI_API_KEY)
     
-    knowledge_str = json.dumps(KNOWLEDGE, indent=2)
+    knowledge_str = "\n".join(
+    f"{k}: {', '.join(v.keys()) if isinstance(v, dict) else str(v)[:100]}..."
+    for k,v in KNOWLEDGE.items()
+)
     system_content = (
         f"You are {AI_CONFIG['name']}, an AI assistant for the American College of Technology (ACT), created by {AI_CONFIG['builder']}.\n"
         f"Your purpose is: {AI_CONFIG['purpose']}\n"
@@ -264,10 +269,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.effective_user.id) != ADMIN_ID:
-        await update.message.reply_text("❌ Administrator authorization required for this command.")
+    if not ADMIN_ID:
+        await update.message.reply_text("❌ Admin system disabled")
         return
-
+    if str(update.effective_user.id) != ADMIN_ID.strip():
+        await update.message.reply_text("❌ Administrator authorization required")
+        return
     command_parts = update.message.text.split(' ', 1)
     if len(command_parts) < 2:
         await update.message.reply_text(
@@ -288,6 +295,24 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Note: KNOWLEDGE.update() is a shallow update.
         # For deep merging of nested dictionaries, a custom function would be needed.
         KNOWLEDGE.update(new_data) 
+        def deep_merge(target: dict, source: dict) -> dict:
+    """Recursively merge nested dictionaries"""
+    for key in source:
+        if isinstance(source[key], dict) and isinstance(target.get(key), dict):
+            target[key] = deep_merge(target[key], source[key])
+        else:
+            target[key] = source[key]
+    return target
+
+async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Existing admin checks...
+    
+    try:
+        new_data_json = command_parts[1]
+        new_data = json.loads(new_data_json)
+        
+        global KNOWLEDGE
+        KNOWLEDGE = deep_merge(KNOWLEDGE, new_data)  # Replaced shallow update
         
         await update.message.reply_text(
             format_message(
@@ -297,6 +322,8 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
         print(f"Knowledge base updated by admin {update.effective_user.id}. New keys: {', '.join(new_data.keys())}")
+
+    # Rest of your update_knowledge code...
 
     except json.JSONDecodeError as e:
         await update.message.reply_text(
@@ -319,6 +346,8 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Webhook handlers and main function remain largely the same
 async def webhook_handler(request):
+    if request.headers.get('X-Telegram-Bot-Api-Secret-Token') != WEBHOOK_SECRET:
+        return web.Response(status=403)
     data = await request.json()
     update = Update.de_json(data, application.bot)
     await application.process_update(update)
