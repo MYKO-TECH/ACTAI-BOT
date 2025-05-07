@@ -357,25 +357,27 @@ async def health_check(request):
     return web.Response(text="OK")
 
 async def main():
-    global application  # Make application global so webhook_handler can access it
+    global application
     application = (
         ApplicationBuilder()
         .token(TELEGRAM_TOKEN)
-        .updater(None)  # For webhook setup
+        .updater(None)
         .build()
     )
+    
     # Initialize application
     await application.initialize()
     await application.start()
+    
     # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
     application.add_handler(CommandHandler("update_knowledge", update_knowledge))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Setup web server for webhook
+    # Setup web server
     app = web.Application()
-    app.router.add_post('/webhook', webhook_handler)  # Simplified endpoint
+    app.router.add_post('/webhook', webhook_handler)
     app.router.add_get('/health', health_check)
 
     port = int(os.environ.get("PORT", 8080))
@@ -385,36 +387,35 @@ async def main():
     await site.start()
     logger.info(f"🚀 Web server started on port {port}")
 
-    # Set webhook with security parameters
+    # Webhook configuration
     render_app_url = os.getenv("RENDER_EXTERNAL_URL", "https://ACTAIBOT.onrender.com")
-    webhook_url = f"{render_app_url}/webhook"  # Clean URL without token
+    webhook_url = f"{render_app_url}/webhook"
     
-   try:
-    await application.bot.set_webhook(
-        url=webhook_url,
-        secret_token=WEBHOOK_SECRET,
-        allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=True
-    )
-    logger.info(f"✅ Webhook successfully set to: {webhook_url}")  # 4 spaces indent
-    logger.info(f"🛡️ Using secret token: {WEBHOOK_SECRET[:3]}...{WEBHOOK_SECRET[-3:]}")  # 4 spaces
-except Exception as e:
-    logger.error(f"❌ Failed to set webhook: {str(e)}")
-    raise
+    try:  # Properly aligned with 4-space indentation
+        await application.bot.set_webhook(
+            url=webhook_url,
+            secret_token=WEBHOOK_SECRET,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
+        )
+        logger.info(f"✅ Webhook successfully set to: {webhook_url}")
+        logger.info(f"🛡️ Using secret token: {WEBHOOK_SECRET[:3]}...{WEBHOOK_SECRET[-3:]}")
+    except Exception as e:
+        logger.error(f"❌ Failed to set webhook: {str(e)}")
+        raise
 
     logger.info("🎓 ACT-AI Assistant is ACTIVE and listening for updates...")
     
-    # Keep the application alive
+    # Keep application alive
     try:
         await asyncio.Event().wait()
     finally:
         logger.info("Shutting down web server and application...")
         await runner.cleanup()
         if application.running:
-             await application.stop()
+            await application.stop()
         await application.shutdown()
         logger.info("Shutdown complete.")
-
 
 if __name__ == "__main__":
     try:
