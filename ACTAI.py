@@ -222,7 +222,7 @@ async def main():
     await site.start()
 
     # Set webhook AFTER server starts
-    webhook_url = f"https://LIBAAI.onrender.com/webhook"
+    webhook_url = f"https://ACTAIBOT.onrender.com/webhook"
     try:
         await application.bot.set_webhook(webhook_url)
         print(f"✅ Webhook set: {webhook_url}")
