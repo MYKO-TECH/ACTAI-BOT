@@ -52,31 +52,25 @@ AI_CONFIG = {
 KNOWLEDGE = {
     "courses": {
         "computer_science": {"price": 15000, "currency": "Br/half-year"},
-        "business_administration": {"price": 15000, "currency": "Br/half-year"}, # Added currency for consistency
+        "business_administration": {"price": 15000, "currency": "Br/half-year"},
         "cybersecurity_training": {
             "price": 15000,
-            "currency": "Br", # Added currency for consistency
+            "currency": "Br",
             "schedule": "Next class starts tomorrow at 2:00 PM",
             "location": "ACT Building 2nd Floor",
             "discount": "50% for ACT students"
         }
     },
-    "contacts": {
+    "contacts": {  # SINGLE CONTACTS SECTION
         "phone": "0911862300",
-        "office_phone": "0955040404",  # NEW NUMBER ADDED
+        "office_phone": "0955040404",  # Correctly included
         "email": "registrar@act.edu.et",
         "website": "www.act.edu.et",
         "telegram": "t.me/act_official_channel"
     },
-    "location": {  # NEW SECTION ADDED
+    "location": {  # Proper location info
         "main": "4 kilo back side of Abrhot Library",
         "directions": "Near 4 Kilo, behind Abrhot Library"
-    },
-    "contacts": {
-        "phone": "0905040404",
-        "email": "registrar@act.edu.et",
-        "website": "www.act.edu.et",
-        "telegram": "t.me/act_official_channel"
     },
     "certificates": {
         "availability": "Next Monday at Registrar Office",
