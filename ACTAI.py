@@ -40,12 +40,33 @@ AI_CONFIG = {
 }
 
 def format_message(header: str, content: str) -> str:
-    return f"🎓 {AI_CONFIG['name']} | American College of Technology\n{'🔵⚪'*7}\n📌 {header}\n{'🔵⚪'*7}\n{content}\n\n🌐 www.act.edu.et"
+    return (
+        f"🎓 ACT-AI | ACT\n"
+        f"{'-'*30}\n"
+        f"🚩 {header}\n"
+        f"{'-'*30}\n"
+        f"{content}\n\n"
+        f"🔗 www.act.edu.et"
+    )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_msg = format_message(
-        "WELCOME TO ACT 🎓",
-        f"{AI_CONFIG['purpose']}\n\n🔐 Available Services:\n1. Course Registration\n2. Fee Payment Status\n3. Class Schedules\n4. Exam Information\n5. Certification Help\n\nType /help for assistance options"
+        "WELCOME TO ACT �",
+        (
+            "Official digital assistant for American College of Technology\n"
+            "• Student registration & payment assistance\n"
+            "• Academic schedule management\n"
+            "• Exam date notifications (Mid/Final)\n"
+            "• Secure grade verification system\n"
+            "• School event announcements\n\n"
+            "🔐 Secure Services Available:\n"
+            "1. Registration Status\n"
+            "2. Fee Payment Portal\n"
+            "3. Class Schedules\n"
+            "4. Exam Timetables\n"
+            "5. Grade Verification\n\n"
+            "Type /help for assistance options"
+        )
     )
     await update.message.reply_text(welcome_msg)
 
@@ -99,11 +120,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         await update.message.reply_text(
-            format_message(
-                "ACADEMIC RECORDS 📚",
-                "Student ID: ACT-2023-45\nMidterm: 88/100\nFinal: 92/100\nStatus: Excellent Standing\nℹ️ Contact registrar for official transcripts"
-            )
-        )
+    format_message(
+        "ACADEMIC RECORDS 📚",
+        ("Student ID: ACT-2023-45\n"
+         "Current GPA: 3.8/4.0\n"
+         "Completed Credits: 120\n"
+         "Program: BSc in Computer Science\n\n"
+         "ℹ️ Official transcripts: registrar@act.edu.et")
+    )
+)
         context.user_data['awaiting_id'] = False
         return
 
