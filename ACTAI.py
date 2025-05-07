@@ -389,18 +389,18 @@ async def main():
     render_app_url = os.getenv("RENDER_EXTERNAL_URL", "https://ACTAIBOT.onrender.com")
     webhook_url = f"{render_app_url}/webhook"  # Clean URL without token
     
-    try:
-        await application.bot.set_webhook(
-            url=webhook_url,
-            secret_token=WEBHOOK_SECRET,  # Add secret token validation
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
-       logger.info(f"✅ Webhook successfully set to: {webhook_url}")
-       logger.info(f"🛡️ Using secret token: {WEBHOOK_SECRET[:3]}...{WEBHOOK_SECRET[-3:]}")  # Partial reveal for verification
-    except Exception as e:
-        logger.error(f"❌ Failed to set webhook: {str(e)}")
-        raise
+   try:
+    await application.bot.set_webhook(
+        url=webhook_url,
+        secret_token=WEBHOOK_SECRET,
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=True
+    )
+    logger.info(f"✅ Webhook successfully set to: {webhook_url}")  # 4 spaces indent
+    logger.info(f"🛡️ Using secret token: {WEBHOOK_SECRET[:3]}...{WEBHOOK_SECRET[-3:]}")  # 4 spaces
+except Exception as e:
+    logger.error(f"❌ Failed to set webhook: {str(e)}")
+    raise
 
     logger.info("🎓 ACT-AI Assistant is ACTIVE and listening for updates...")
     
