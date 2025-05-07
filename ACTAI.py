@@ -62,7 +62,18 @@ KNOWLEDGE = {
         }
     },
     "contacts": {
-        "phone": "0944150000",
+        "phone": "0911862300",
+        "office_phone": "0955040404",  # NEW NUMBER ADDED
+        "email": "registrar@act.edu.et",
+        "website": "www.act.edu.et",
+        "telegram": "t.me/act_official_channel"
+    },
+    "location": {  # NEW SECTION ADDED
+        "main": "4 kilo back side of Abrhot Library",
+        "directions": "Near 4 Kilo, behind Abrhot Library"
+    },
+    "contacts": {
+        "phone": "0905040404",
         "email": "registrar@act.edu.et",
         "website": "www.act.edu.et",
         "telegram": "t.me/act_official_channel"
