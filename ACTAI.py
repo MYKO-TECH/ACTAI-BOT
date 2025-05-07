@@ -276,34 +276,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
 
-async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not ADMIN_ID:
-        await update.message.reply_text("❌ Admin system disabled")
-        return
-    if str(update.effective_user.id) != ADMIN_ID.strip():
-        await update.message.reply_text("❌ Administrator authorization required")
-        return
-    command_parts = update.message.text.split(' ', 1)
-    if len(command_parts) < 2:
-        await update.message.reply_text(
-            format_message(
-                "UPDATE FAILED ❌",
-                "No data provided for update.\n\n"
-                "Valid format example:\n"
-                "/update_knowledge {\"courses\": {\"new_course\": {\"price\": 10000}}}"
-            )
-        )
-        return
-
-    try:
-        new_data_json = command_parts[1]
-        new_data = json.loads(new_data_json)
-        
-        global KNOWLEDGE
-        KNOWLEDGE = deep_merge(KNOWLEDGE, new_data)
-        # Note: KNOWLEDGE.update() is a shallow update.
-        # For deep merging of nested dictionaries, a custom function would be needed.
-        KNOWLEDGE.update(new_data) 
+ 
 async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not ADMIN_ID:
         await update.message.reply_text("❌ Admin system disabled")
