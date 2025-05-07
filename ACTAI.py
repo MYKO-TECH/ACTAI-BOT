@@ -77,6 +77,14 @@ KNOWLEDGE = {
 }
 # ================= UPDATE AREA END =================
 
+def deep_merge(target: dict, source: dict) -> dict:
+    """Recursively merge nested dictionaries"""
+    for key in source:
+        if isinstance(source[key], dict) and isinstance(target.get(key), dict):
+            target[key] = deep_merge(target[key], source[key])
+        else:
+            target[key] = source[key]
+    return target
 def format_message(header: str, content: str) -> str:
     return (
         f"🎓 ACT-AI | ACT\n"
@@ -292,18 +300,10 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
         new_data = json.loads(new_data_json)
         
         global KNOWLEDGE
+        KNOWLEDGE = deep_merge(KNOWLEDGE, new_data)
         # Note: KNOWLEDGE.update() is a shallow update.
         # For deep merging of nested dictionaries, a custom function would be needed.
         KNOWLEDGE.update(new_data) 
-        def deep_merge(target: dict, source: dict) -> dict:
-    """Recursively merge nested dictionaries"""
-    for key in source:
-        if isinstance(source[key], dict) and isinstance(target.get(key), dict):
-            target[key] = deep_merge(target[key], source[key])
-        else:
-            target[key] = source[key]
-    return target
-
 async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not ADMIN_ID:
         await update.message.reply_text("❌ Admin system disabled")
