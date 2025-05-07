@@ -311,17 +311,25 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if str(update.effective_user.id) != ADMIN_ID.strip():
         await update.message.reply_text("❌ Administrator authorization required")
         return
-    
-    # Rest of the update_knowledge function...
-    
+
+    command_parts = update.message.text.split(' ', 1)
+    if len(command_parts) < 2:
+        await update.message.reply_text(
+            format_message(
+                "UPDATE FAILED ❌",
+                "No data provided for update.\n\n"
+                "Valid format example:\n"
+                "/update_knowledge {\"courses\": {\"new_course\": {\"price\": 10000}}}"
+            )
+        )
+        return
+
     try:
         new_data_json = command_parts[1]
         new_data = json.loads(new_data_json)
         
         global KNOWLEDGE
-        KNOWLEDGE = deep_merge(KNOWLEDGE, new_data)  # Fixed deep merge
-        
-        # Rest of the try block...  # Replaced shallow update
+        KNOWLEDGE = deep_merge(KNOWLEDGE, new_data)
         
         await update.message.reply_text(
             format_message(
@@ -331,8 +339,6 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
         print(f"Knowledge base updated by admin {update.effective_user.id}. New keys: {', '.join(new_data.keys())}")
-
-    # Rest of your update_knowledge code...
 
     except json.JSONDecodeError as e:
         await update.message.reply_text(
