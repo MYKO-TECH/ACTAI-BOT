@@ -334,8 +334,10 @@ async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Webhook handlers and main function remain largely the same
 async def webhook_handler(request):
+    # Verify secret token first
     if request.headers.get('X-Telegram-Bot-Api-Secret-Token') != WEBHOOK_SECRET:
         return web.Response(status=403)
+    
     data = await request.json()
     update = Update.de_json(data, application.bot)
     await application.process_update(update)
@@ -345,64 +347,61 @@ async def health_check(request):
     return web.Response(text="OK")
 
 async def main():
-    global application # Make application global so webhook_handler can access it
+    global application  # Make application global so webhook_handler can access it
     application = (
         ApplicationBuilder()
         .token(TELEGRAM_TOKEN)
-        .updater(None) # For webhook setup
+        .updater(None)  # For webhook setup
         .build()
     )
 
-    # Initialize application (important for some internal setups)
+    # Initialize application
     await application.initialize()
 
     # Add handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", start)) # Help can point to start or a dedicated help message
+    application.add_handler(CommandHandler("help", start))
     application.add_handler(CommandHandler("update_knowledge", update_knowledge))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Start the bot's polling mechanism (not strictly needed if only webhook, but good for dev)
-    # await application.start() # Comment out if purely webhook based on Render
 
     # Setup web server for webhook
     app = web.Application()
-    app.router.add_post(f'/{TELEGRAM_TOKEN}', webhook_handler) # Using token in path for some security
+    app.router.add_post('/webhook', webhook_handler)  # Simplified endpoint
     app.router.add_get('/health', health_check)
 
-    port = int(os.environ.get("PORT", 8080)) # Render usually sets PORT env var
+    port = int(os.environ.get("PORT", 8080))
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host='0.0.0.0', port=port)
     await site.start()
     print(f"🚀 Web server started on port {port}")
 
-    # Set webhook
-    # Ensure your Render service URL is correct. Using a generic placeholder.
-    # Example: "https://your-app-name.onrender.com"
-    render_app_url = os.getenv("RENDER_EXTERNAL_URL", f"https://ACTAIBOT.onrender.com") # Default if not set
-    webhook_url = f"{render_app_url}/{TELEGRAM_TOKEN}"
+    # Set webhook with security parameters
+    render_app_url = os.getenv("RENDER_EXTERNAL_URL", "https://ACTAIBOT.onrender.com")
+    webhook_url = f"{render_app_url}/webhook"  # Clean URL without token
     
     try:
         await application.bot.set_webhook(
             url=webhook_url,
-            allowed_updates=Update.ALL_TYPES # Or specify types like [Update.MESSAGE, Update.CALLBACK_QUERY]
+            secret_token=WEBHOOK_SECRET,  # Add secret token validation
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
         )
         print(f"✅ Webhook successfully set to: {webhook_url}")
+        print(f"🛡️ Using secret token: {WEBHOOK_SECRET[:3]}...{WEBHOOK_SECRET[-3:]}")  # Partial reveal for verification
     except Exception as e:
         print(f"❌ Failed to set webhook: {str(e)}")
-        # Depending on severity, you might want to raise e or handle differently
-        # raise # Uncomment if critical
+        raise
 
     print("🎓 ACT-AI Assistant is ACTIVE and listening for updates...")
     
     # Keep the application alive
     try:
-        await asyncio.Event().wait() # Keeps the main coroutine running indefinitely
+        await asyncio.Event().wait()
     finally:
         print("Shutting down web server and application...")
         await runner.cleanup()
-        if application.running: # Check if application was started with .start()
+        if application.running:
              await application.stop()
         await application.shutdown()
         print("Shutdown complete.")
