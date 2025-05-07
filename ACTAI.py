@@ -1,4 +1,5 @@
 import os
+import json
 import asyncio
 from aiohttp import web
 from openai import OpenAI
@@ -17,7 +18,8 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# AI Configuration
+# // ADD INFO HERE: Edit this section to update bot knowledge
+# ================= KNOWLEDGE CONFIGURATION =================
 AI_CONFIG = {
     "name": "ACT-AI",
     "builder": "ACT Students Developer Team",
@@ -39,6 +41,45 @@ AI_CONFIG = {
     ]
 }
 
+KNOWLEDGE = {
+    "courses": {
+        "computer_science": {
+            "price": 15000,
+            "currency": "Br/half-year",
+            "discount": "50% for ACT students"
+        },
+        "business_administration": {
+            "price": 15000,
+            "currency": "Br/half-year"
+        },
+        "cybersecurity_training": {
+            "price": 1500,
+            "schedule": "Next class starts tomorrow at 2:00 PM",
+            "location": "ACT Building 2nd Floor",
+            "discount": "50% for ACT students"
+        }
+    },
+    "contacts": {
+        "phone": "0944150000",
+        "email": "registrar@act.edu.et",
+        "website": "www.act.edu.et",
+        "telegram": "t.me/act_official_channel"
+    },
+    "certificates": {
+        "availability": "May 2, 2025",
+        "collection": "ACT Administration Office"
+    },
+    "masters_programs": {
+        "scholarship": "75%",
+        "partners": "MIU programs",
+        "features": [
+            "Consciousness-Based Education",
+            "Global Networking"
+        ]
+    }
+}
+# ================= UPDATE AREA END =================
+
 def format_message(header: str, content: str) -> str:
     return (
         f"🎓 ACT-AI | ACT\n"
@@ -51,7 +92,7 @@ def format_message(header: str, content: str) -> str:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_msg = format_message(
-        "WELCOME TO ACT �",
+        "WELCOME TO ACT",
         (
             "Official digital assistant for American College of Technology\n"
             "• Student registration & payment assistance\n"
@@ -74,35 +115,49 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text.lower()
     print(f"Message from {update.effective_user.first_name}: {user_message}")
 
-    # Pre-defined responses
+    # Pre-defined responses using KNOWLEDGE data
     if any(keyword in user_message for keyword in ["cybersecurity", "training"]):
+        cyber = KNOWLEDGE['courses']['cybersecurity_training']
         response = format_message(
             "CYBERSECURITY TRAINING 🔒",
-            "Next class starts tomorrow at 2:00 PM!\n📍 ACT Building 2nd Floor\n📞 0944150000\n\n🔖 ACT students get 50% discount!\n📲 Paid students join: t.me/cyber_classes_act"
+            f"{cyber['schedule']}\n📍 {cyber['location']}\n"
+            f"📞 {KNOWLEDGE['contacts']['phone']}\n\n"
+            f"🔖 {cyber['discount']}\n"
+            "📲 Paid students join: t.me/cyber_classes_act"
         )
         await update.message.reply_text(response)
         return
 
     if "course" in user_message and ("fee" in user_message or "price" in user_message):
+        courses = KNOWLEDGE['courses']
+        response_content = "\n".join(
+            [f"{name.replace('_', ' ').title()}: {data['price']} {data.get('currency', 'Br')}"
+             for name, data in courses.items()]
+        )
         response = format_message(
             "COURSE FEES 💳",
-            "Computer Science: 15,000 Br/half-year\nBusiness Administration: 15,000 Br/half-year\n\nCybersecurity Training: 18,500 Br\n🔖 ACT students: 50% discount!"
+            f"{response_content}\n\n🔖 Discounts: {courses['cybersecurity_training']['discount']}"
         )
         await update.message.reply_text(response)
         return
 
     if "certificate" in user_message or "completion" in user_message:
+        cert = KNOWLEDGE['certificates']
         response = format_message(
             "CERTIFICATE UPDATE 🎓",
-            "Cybersecurity & Project Management certificates available from May 2, 2025!\n📍 Collect from ACT Administration Office"
+            f"Available from {cert['availability']}\n📍 {cert['collection']}"
         )
         await update.message.reply_text(response)
         return
 
     if "master" in user_message or "international" in user_message:
+        masters = KNOWLEDGE['masters_programs']
         response = format_message(
             "MASTER'S PROGRAMS 🌍",
-            "International Master's with 75% scholarship!\n✅ MIU programs\n✅ Consciousness-Based Education\n✅ Global Networking\n📞 0944150000"
+            f"International Master's with {masters['scholarship']} scholarship!\n"
+            f"✅ {masters['partners']}\n"
+            f"✅ {'\n✅ '.join(masters['features'])}\n"
+            f"📞 {KNOWLEDGE['contacts']['phone']}"
         )
         await update.message.reply_text(response)
         return
@@ -120,15 +175,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         await update.message.reply_text(
-    format_message(
-        "ACADEMIC RECORDS 📚",
-        ("Student ID: ACT-2023-45\n"
-         "Current GPA: 3.8/4.0\n"
-         "Completed Credits: 120\n"
-         "Program: BSc in Computer Science\n\n"
-         "ℹ️ Official transcripts: registrar@act.edu.et")
-    )
-)
+            format_message(
+                "ACADEMIC RECORDS 📚",
+                ("Student ID: ACT-2023-45\n"
+                 "Current GPA: 3.8/4.0\n"
+                 "Completed Credits: 120\n"
+                 "Program: BSc in Computer Science\n\n"
+                 f"ℹ️ Official transcripts: {KNOWLEDGE['contacts']['email']}")
+            )
+        )
         context.user_data['awaiting_id'] = False
         return
 
@@ -146,17 +201,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 format_message(
                     "INVALID ID FORMAT ❌",
-                    "Please use ACT Student ID format:\nExample: ACT-2023-01\n📞 Contact admin: 0944150000"
+                    f"Please use ACT Student ID format:\nExample: ACT-2023-01\n📞 Contact admin: {KNOWLEDGE['contacts']['phone']}"
                 )
             )
-        context.user_data['awaiting_id'] = False  # Reset after attempt
+        context.user_data['awaiting_id'] = False
         return
 
-    # OpenAI fallback
+    # OpenAI fallback with dynamic knowledge
     client = OpenAI(api_key=OPENAI_API_KEY)
     system_message = format_message(
         "ACADEMIC ASSISTANT PROTOCOL",
-        f"You are {AI_CONFIG['name']}, created by {AI_CONFIG['builder']}\nPURPOSE: {AI_CONFIG['purpose']}\nRULES: {'; '.join(AI_CONFIG['restrictions'])}\n\nACT INFO: {get_act_info()}"
+        f"You are {AI_CONFIG['name']}, created by {AI_CONFIG['builder']}\n"
+        f"PURPOSE: {AI_CONFIG['purpose']}\n"
+        f"RULES: {'; '.join(AI_CONFIG['restrictions'])}\n\n"
+        f"CURRENT KNOWLEDGE:\n{json.dumps(KNOWLEDGE, indent=2)}"
     )
 
     try:
@@ -178,62 +236,64 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             format_message(
                 "SYSTEM ERROR ⚠️",
-                "Technical difficulty encountered\nPlease try again later or\n📞 Contact support: 0944150000"
+                f"Technical difficulty encountered\nPlease try again later or\n📞 Contact support: {KNOWLEDGE['contacts']['phone']}"
             )
         )
 
-def get_act_info():
-    return (
-        "ACT Academy offers:\n"
-        "- Cybersecurity Training\n- Project Management\n- Oracle Database\n- UI/UX Design\n"
-        "📍 Location: 4 Kilo, Addis Ababa\n"
-        "📞 Contact: 0944150000\n"
-        "🌐 Website: www.act.edu.et\n"
-        "📢 Telegram: t.me/act_official_channel\n"
-        "Mission: Equip youth with digital skills for employment\n"
-        "Programs: Degree, Masters, Short-term training\n"
-        "Partnerships: Coursera, MIU\n"
-        "Upcoming Events: Cybersecurity classes starting soon!"
-    )
+async def update_knowledge(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Admin authentication
+    ADMIN_ID = os.getenv("ADMIN_ID", "")
+    if str(update.effective_user.id) != ADMIN_ID:
+        await update.message.reply_text("❌ Administrator authorization required")
+        return
 
-# ... (keep webhook handlers and main function same as before, just update print statements)
+    try:
+        # Parse JSON update
+        new_data = json.loads(update.message.text.split(' ', 1)[1])
+        global KNOWLEDGE
+        KNOWLEDGE.update(new_data)
+        
+        await update.message.reply_text(
+            format_message(
+                "KNOWLEDGE UPDATED ✅",
+                "New information successfully loaded!\n\n"
+                f"Updated sections: {', '.join(new_data.keys())}"
+            )
+        )
+    except Exception as e:
+        await update.message.reply_text(
+            format_message(
+                "UPDATE FAILED ❌",
+                f"Error: {str(e)}\n\nValid format:\n/update_knowledge {{\"courses\": {{\"computer_science\": {{\"price\": 20000}}}}"
+            )
+        )
 
-
-
-# Webhook handlers
+# Webhook handlers and main function remain same
 async def webhook_handler(request):
-    """Handle incoming Telegram updates via webhook"""
     data = await request.json()
     update = Update.de_json(data, application.bot)
     await application.process_update(update)
     return web.Response()
 
 async def health_check(request):
-    """Health check endpoint for Render monitoring"""
     return web.Response(text="OK")
 
 async def main():
     global application
-    # Initialize application with webhook config
     application = (
         ApplicationBuilder()
         .token(TELEGRAM_TOKEN)
-        .updater(None)  # Disable polling
+        .updater(None)
         .build()
     )
     
-    # MUST initialize before adding handlers
     await application.initialize()
-    
-    # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", start))
+    application.add_handler(CommandHandler("update_knowledge", update_knowledge))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Start application components
+    
     await application.start()
-
-    # Configure web server
     app = web.Application()
     app.router.add_post('/webhook', webhook_handler)
     app.router.add_get('/health', health_check)
@@ -241,12 +301,9 @@ async def main():
     port = int(os.environ.get("PORT", 5000))
     runner = web.AppRunner(app)
     await runner.setup()
-    
-    # Start web server
     site = web.TCPSite(runner, host='0.0.0.0', port=port)
     await site.start()
 
-    # Set webhook AFTER server starts
     webhook_url = f"https://ACTAIBOT.onrender.com/webhook"
     try:
         await application.bot.set_webhook(webhook_url)
@@ -255,13 +312,11 @@ async def main():
         print(f"❌ Webhook error: {str(e)}")
         raise
 
-    print("🎓 LIBA Assistant ACTIVE")
+    print("🎓 ACT-AI Assistant ACTIVE")
     
-    # Keep running until interrupted
     try:
         await asyncio.Event().wait()
     finally:
-        # Proper cleanup
         await application.stop()
         await application.shutdown()
 
