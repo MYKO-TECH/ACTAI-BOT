@@ -18,7 +18,6 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# // ADD INFO HERE: Edit this section to update bot knowledge
 # ================= KNOWLEDGE CONFIGURATION =================
 AI_CONFIG = {
     "name": "ACT-AI",
@@ -43,15 +42,8 @@ AI_CONFIG = {
 
 KNOWLEDGE = {
     "courses": {
-        "computer_science": {
-            "price": 15000,
-            "currency": "Br/half-year",
-            "discount": "50% for ACT students"
-        },
-        "business_administration": {
-            "price": 15000,
-            "currency": "Br/half-year"
-        },
+        "computer_science": {"price": 15000, "currency": "Br/half-year"},
+        "business_administration": {"price": 15000},
         "cybersecurity_training": {
             "price": 1500,
             "schedule": "Next class starts tomorrow at 2:00 PM",
@@ -64,18 +56,6 @@ KNOWLEDGE = {
         "email": "registrar@act.edu.et",
         "website": "www.act.edu.et",
         "telegram": "t.me/act_official_channel"
-    },
-    "certificates": {
-        "availability": "May 2, 2025",
-        "collection": "ACT Administration Office"
-    },
-    "masters_programs": {
-        "scholarship": "75%",
-        "partners": "MIU programs",
-        "features": [
-            "Consciousness-Based Education",
-            "Global Networking"
-        ]
     }
 }
 # ================= UPDATE AREA END =================
@@ -112,7 +92,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_msg)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text.lower()
+        user_message = update.message.text.lower()
     print(f"Message from {update.effective_user.first_name}: {user_message}")
 
     # Pre-defined responses using KNOWLEDGE data
@@ -207,15 +187,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['awaiting_id'] = False
         return
 
-    # OpenAI fallback with dynamic knowledge
+    # OpenAI fallback - FIXED SECTION
     client = OpenAI(api_key=OPENAI_API_KEY)
-    system_message = format_message(
-        "ACADEMIC ASSISTANT PROTOCOL",
+    
+    # Build system message without problematic f-strings
+    knowledge_str = json.dumps(KNOWLEDGE, indent=2)
+    system_content = (
         f"You are {AI_CONFIG['name']}, created by {AI_CONFIG['builder']}\n"
         f"PURPOSE: {AI_CONFIG['purpose']}\n"
         f"RULES: {'; '.join(AI_CONFIG['restrictions'])}\n\n"
-        f"CURRENT KNOWLEDGE:\n{json.dumps(KNOWLEDGE, indent=2)}"
+        "CURRENT KNOWLEDGE:\n"
+        f"{knowledge_str.replace('\\', '')}"  # Remove any backslashes
     )
+    
+    system_message = format_message("ACADEMIC ASSISTANT PROTOCOL", system_content)
 
     try:
         response = client.chat.completions.create(
